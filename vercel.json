@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd sun-flight && npm install && npm run build",
+  "outputDirectory": "sun-flight/dist",
+  "framework": "vite"
+} 
