@@ -228,7 +228,6 @@ function App() {
   const [arrivalTime, setArrivalTime] = useState<DateTime | null>(null)
   const [dstWarning, setDstWarning] = useState<string | null>(null)
   const [sunSummary, setSunSummary] = useState<string>('')
-  const [details, setDetails] = useState<string>('')
   const [sunEvents, setSunEvents] = useState<Array<{ type: 'sunrise' | 'sunset'; time: Date; lat: number; lon: number }>>([])
   const [mapTime, setMapTime] = useState<Date>(() => new Date());
   const [darkMode, setDarkMode] = useState(true);
@@ -356,7 +355,6 @@ function App() {
     setArrivalTime(null)
     setDstWarning(null)
     setSunSummary('')
-    setDetails('')
     setSunEvents([])
     setLoading(true)
 
@@ -507,10 +505,6 @@ function App() {
       }
       setRecommendation(seat);
       setSunSummary(summary);
-      setDetails(
-        `Breakdown:\n` +
-        `Left: ${leftCount}, Right: ${rightCount}, Ahead: ${aheadCount}, Behind: ${behindCount}, Visible: ${sunIntervals}, Total: ${totalIntervals}`
-      );
       setMapTime(depDT.toJSDate());
     } catch (err: any) {
       setError(err.message || 'Failed to get flight data.')
@@ -538,13 +532,15 @@ function App() {
   let planePos: [number, number] | null = null;
   let sunAz = null;
   let sunAlt = null;
+  let currentSunPoint: any = null;
   if (sunPoints.length > 0 && mapTime) {
     let idx = sunPoints.findIndex(p => Math.abs(p.time.getTime() - mapTime.getTime()) < 5 * 60 * 1000);
     if (idx === -1) idx = 0;
-    sunPos = [sunPoints[idx].lat, sunPoints[idx].lon];
-    sunAz = sunPoints[idx].azimuth;
-    sunAlt = sunPoints[idx].altitude;
-    planePos = [sunPoints[idx].lat, sunPoints[idx].lon];
+    currentSunPoint = sunPoints[idx];
+    sunPos = [currentSunPoint.lat, currentSunPoint.lon];
+    sunAz = currentSunPoint.azimuth;
+    sunAlt = currentSunPoint.altitude;
+    planePos = [currentSunPoint.lat, currentSunPoint.lon];
   }
 
   // Subsolar point and terminator
@@ -573,7 +569,7 @@ function App() {
         </div>
       </header>
       <main className="flex-1 container mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
-        <section className="w-full lg:w-1/3 bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 flex flex-col gap-6 sparkle-on-hover">
+        <section className="w-full lg:w-2/5 bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 flex flex-col gap-6 sparkle-on-hover">
           <h2 className="text-xl font-bold text-white">Flight Details</h2>
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             <div className="flex gap-4 items-end">
@@ -714,8 +710,7 @@ function App() {
                 </button>
               </div>
               <div className="text-3xl font-extrabold text-amber-400 mb-2">{recommendation}</div>
-              <div className="text-sm text-slate-300 mb-1">{sunSummary}</div>
-              {details && <pre className="text-xs text-slate-400 whitespace-pre-wrap mt-2">{details}</pre>}
+              <div className="text-sm text-slate-300">{sunSummary}</div>
             </div>
           )}
           {favorites.length > 0 && (
@@ -736,7 +731,7 @@ function App() {
             </div>
           )}
         </section>
-        <section className="w-full lg:w-2/3 flex flex-col gap-6">
+        <section className="w-full lg:w-2/5 flex flex-col gap-6">
           <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 flex-1 flex flex-col sparkle-on-hover">
             <h2 className="text-xl font-bold text-white mb-4">Flight Path & Sun Position</h2>
             <div className="h-[400px] rounded-lg overflow-hidden border-2 border-slate-700/50 shadow-inner">
@@ -831,6 +826,36 @@ function App() {
                 <div className="text-xs text-slate-400 text-center mt-1">
                   {DateTime.fromJSDate(mapTime).toFormat('yyyy-LL-dd HH:mm ZZZZ')}
                 </div>
+                
+                {/* Enhanced time slider information */}
+                {currentSunPoint && (
+                  <div className="mt-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+                    <div className="text-xs text-slate-300 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Position:</span>
+                        <span>{currentSunPoint.lat.toFixed(2)}°N, {currentSunPoint.lon.toFixed(2)}°E</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Sun Altitude:</span>
+                        <span className={currentSunPoint.altitude >= 0 ? 'text-amber-400' : 'text-slate-400'}>
+                          {currentSunPoint.altitude.toFixed(1)}°
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Sun Azimuth:</span>
+                        <span>{currentSunPoint.azimuth.toFixed(1)}°</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Flight Progress:</span>
+                        <span>{((mapTime.getTime() - minTime) / (maxTime - minTime) * 100).toFixed(1)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Time Remaining:</span>
+                        <span>{((maxTime - mapTime.getTime()) / (1000 * 60 * 60)).toFixed(1)}h</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -838,7 +863,7 @@ function App() {
         
         {/* Dedicated Sunset/Sunrise Information Section */}
         {(depTime && arrivalTime) && (
-          <section className="w-full lg:w-1/3 bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 sparkle-on-hover">
+          <section className="w-full lg:w-1/5 bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 sparkle-on-hover">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <FaSun className="text-amber-400" />
               Sunset & Sunrise Info
