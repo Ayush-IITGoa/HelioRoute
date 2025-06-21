@@ -78,6 +78,7 @@ const customSelectStyles = {
     border: '1px solid rgba(71, 85, 105, 0.5)',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
     zIndex: 1000,
+    marginTop: '4px',
   }),
   option: (provided: any, state: any) => ({
     ...provided,
@@ -85,6 +86,8 @@ const customSelectStyles = {
     color: state.isSelected ? '#1e293b' : '#d1d5db',
     padding: '12px 16px',
     cursor: 'pointer',
+    margin: '2px 8px',
+    borderRadius: '0.375rem',
     '&:active': {
       backgroundColor: 'rgba(251, 191, 36, 0.3)'
     }
@@ -106,6 +109,11 @@ const customSelectStyles = {
     ...provided,
     color: '#64748b',
     backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    padding: '16px',
+  }),
+  menuList: (provided: any) => ({
+    ...provided,
+    padding: '4px',
   })
 };
 
@@ -115,19 +123,16 @@ const CustomOption = ({ data, isFocused, isSelected, innerProps, ...props }: any
   return (
     <div
       {...innerProps}
-      className={`p-3 cursor-pointer transition-colors ${
+      className={`p-3 cursor-pointer transition-colors w-full ${
         isSelected ? 'bg-amber-500 text-slate-900' : 
         isFocused ? 'bg-amber-500/20 text-slate-200' : 'text-slate-300'
       }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <div className="font-semibold text-sm">{airport.iata}</div>
-          <div className="text-xs opacity-80">{airport.city}, {airport.country}</div>
+      <div className="flex items-center w-full">
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm truncate">{airport.iata}</div>
+          <div className="text-xs opacity-80 truncate">{airport.city}, {airport.country}</div>
           <div className="text-xs opacity-60 truncate">{airport.name}</div>
-        </div>
-        <div className="text-xs opacity-60 ml-2">
-          {airport.lat.toFixed(2)}°, {airport.lon.toFixed(2)}°
         </div>
       </div>
     </div>
@@ -137,17 +142,21 @@ const CustomOption = ({ data, isFocused, isSelected, innerProps, ...props }: any
 const MenuList = (props: MenuListProps<AirportOption>) => {
   const { options, children, maxHeight, getValue } = props;
   const [value] = getValue();
-  const initialOffset = Array.isArray(options) ? options.indexOf(value) * 60 : 0; // Increased item size
+  const initialOffset = Array.isArray(options) ? options.indexOf(value) * 50 : 0; // Reduced item size
 
   return (
     <List
       width="100%"
       height={maxHeight}
       itemCount={Array.isArray(children) ? children.length : 0}
-      itemSize={60} // Increased for better readability
+      itemSize={50} // Reduced for better fit
       initialScrollOffset={initialOffset}
     >
-      {({ index, style }) => <div style={style}>{Array.isArray(children) ? children[index] : null}</div>}
+      {({ index, style }) => (
+        <div style={{ ...style, width: '100%', overflow: 'hidden' }}>
+          {Array.isArray(children) ? children[index] : null}
+        </div>
+      )}
     </List>
   );
 };
