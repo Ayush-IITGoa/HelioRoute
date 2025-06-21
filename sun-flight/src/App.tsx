@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getInitialBearing, interpolateSunAlongRoute } from './sunUtils'
+import { getInitialBearing, interpolateSunAlongRoute, interpolateGreatCircle } from './sunUtils'
 import { MapContainer, TileLayer, Polyline, useMap, CircleMarker, Marker, Popup, Polyline as RLPolyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import airports from './airports.json'
@@ -10,14 +10,50 @@ import Select, { components, type MenuListProps } from 'react-select';
 import { FixedSizeList as List } from 'react-window';
 import L from 'leaflet';
 
+// Fix Leaflet default icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Create custom modern markers
+const createCustomIcon = (color: string, icon: any) => {
+  return L.divIcon({
+    html: `<div style="
+      background: ${color};
+      border: 2px solid white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      color: white;
+      font-size: 12px;
+    ">${icon}</div>`,
+    className: 'custom-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
+const departureIcon = createCustomIcon('#10b981', '✈️');
+const arrivalIcon = createCustomIcon('#ef4444', '✈️');
+const planeIcon = createCustomIcon('#3b82f6', '✈️');
+
 interface AirportOption {
   value: string;
   label: string;
+  airport: any; // Store the full airport object
 }
 
 const airportOptions: AirportOption[] = airports.map(airport => ({
   value: airport.iata,
-  label: `${airport.name} (${airport.iata}) - ${airport.city}`
+  label: `${airport.iata} - ${airport.city}, ${airport.country}`,
+  airport: airport
 }));
 
 const customSelectStyles = {
@@ -27,20 +63,26 @@ const customSelectStyles = {
     borderRadius: '0.5rem',
     border: state.isFocused ? '2px solid #f59e0b' : '2px solid transparent',
     boxShadow: 'none',
+    minHeight: '44px',
     '&:hover': {
       borderColor: '#f59e0b'
     }
   }),
   menu: (provided: any) => ({
     ...provided,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '0.5rem',
+    border: '1px solid rgba(71, 85, 105, 0.5)',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
   }),
   option: (provided: any, state: any) => ({
     ...provided,
     backgroundColor: state.isSelected ? '#f59e0b' : state.isFocused ? 'rgba(251, 191, 36, 0.2)' : 'transparent',
     color: state.isSelected ? '#1e293b' : '#d1d5db',
+    padding: '12px 16px',
+    cursor: 'pointer',
     '&:active': {
       backgroundColor: 'rgba(251, 191, 36, 0.3)'
     }
@@ -48,24 +90,59 @@ const customSelectStyles = {
   singleValue: (provided: any) => ({
     ...provided,
     color: '#d1d5db',
+    fontWeight: '500',
   }),
   input: (provided: any) => ({
     ...provided,
     color: '#d1d5db'
+  }),
+  placeholder: (provided: any) => ({
+    ...provided,
+    color: '#64748b',
+  }),
+  noOptionsMessage: (provided: any) => ({
+    ...provided,
+    color: '#64748b',
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
   })
+};
+
+// Custom Option component for better airport display
+const CustomOption = ({ data, isFocused, isSelected, ...props }: any) => {
+  const airport = data.airport;
+  return (
+    <div
+      {...props}
+      className={`p-3 cursor-pointer transition-colors ${
+        isSelected ? 'bg-amber-500 text-slate-900' : 
+        isFocused ? 'bg-amber-500/20 text-slate-200' : 'text-slate-300'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="font-semibold text-sm">{airport.iata}</div>
+          <div className="text-xs opacity-80">{airport.city}, {airport.country}</div>
+          <div className="text-xs opacity-60 truncate">{airport.name}</div>
+        </div>
+        <div className="text-xs opacity-60 ml-2">
+          {airport.lat.toFixed(2)}°, {airport.lon.toFixed(2)}°
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const MenuList = (props: MenuListProps<AirportOption>) => {
   const { options, children, maxHeight, getValue } = props;
   const [value] = getValue();
-  const initialOffset = Array.isArray(options) ? options.indexOf(value) * 35 : 0;
+  const initialOffset = Array.isArray(options) ? options.indexOf(value) * 60 : 0; // Increased item size
 
   return (
     <List
       width="100%"
       height={maxHeight}
       itemCount={Array.isArray(children) ? children.length : 0}
-      itemSize={35}
+      itemSize={60} // Increased for better readability
       initialScrollOffset={initialOffset}
     >
       {({ index, style }) => <div style={style}>{Array.isArray(children) ? children[index] : null}</div>}
@@ -184,6 +261,12 @@ function App() {
     // handleSubmit(new Event('submit') as any); 
   };
 
+  const swapAirports = () => {
+    const temp = sourceIATA;
+    setSourceIATA(destIATA);
+    setDestIATA(temp);
+  };
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -231,7 +314,23 @@ function App() {
       
       const src = { lat: foundSource.lat, lon: foundSource.lon }
       const dst = { lat: foundDest.lat, lon: foundDest.lon }
-      setFlightPath([[src.lat, src.lon], [dst.lat, dst.lon]])
+      
+      // Create a curved flight path with multiple points
+      const createFlightPath = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const points: [number, number][] = [];
+        const steps = 20; // Number of points along the path
+        
+        for (let i = 0; i <= steps; i++) {
+          const frac = i / steps;
+          const point = interpolateGreatCircle(lat1, lon1, lat2, lon2, frac);
+          points.push([point.lat, point.lon]);
+        }
+        
+        return points;
+      };
+      
+      const flightPathPoints = createFlightPath(src.lat, src.lon, dst.lat, dst.lon);
+      setFlightPath(flightPathPoints)
 
       const intervalMin = 10;
       const sunPoints = interpolateSunAlongRoute(
@@ -373,7 +472,7 @@ function App() {
         <section className="w-full lg:w-1/3 bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 flex flex-col gap-6 sparkle-on-hover">
           <h2 className="text-xl font-bold text-white">Flight Details</h2>
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-end">
               <div className="flex-1">
                 <label className="block text-sm font-semibold mb-1 text-slate-300" htmlFor="source">From</label>
                 <Select<AirportOption>
@@ -387,9 +486,33 @@ function App() {
                   }}
                   styles={customSelectStyles}
                   placeholder="Select source..."
-                  components={{ MenuList }}
+                  components={{ MenuList, Option: CustomOption }}
+                  isSearchable={true}
+                  filterOption={(option, inputValue) => {
+                    const airport = option.data.airport;
+                    const searchTerm = inputValue.toLowerCase();
+                    return (
+                      airport.iata.toLowerCase().includes(searchTerm) ||
+                      airport.city.toLowerCase().includes(searchTerm) ||
+                      airport.country.toLowerCase().includes(searchTerm) ||
+                      airport.name.toLowerCase().includes(searchTerm)
+                    );
+                  }}
                 />
               </div>
+              
+              {/* Swap Button */}
+              <button
+                type="button"
+                onClick={swapAirports}
+                className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-amber-400 transition-all duration-200 border border-slate-600/50 hover:border-amber-500/50"
+                title="Swap airports"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </button>
+              
               <div className="flex-1">
                 <label className="block text-sm font-semibold mb-1 text-slate-300" htmlFor="dest">To</label>
                 <Select<AirportOption>
@@ -403,7 +526,18 @@ function App() {
                   }}
                   styles={customSelectStyles}
                   placeholder="Select destination..."
-                  components={{ MenuList }}
+                  components={{ MenuList, Option: CustomOption }}
+                  isSearchable={true}
+                  filterOption={(option, inputValue) => {
+                    const airport = option.data.airport;
+                    const searchTerm = inputValue.toLowerCase();
+                    return (
+                      airport.iata.toLowerCase().includes(searchTerm) ||
+                      airport.city.toLowerCase().includes(searchTerm) ||
+                      airport.country.toLowerCase().includes(searchTerm) ||
+                      airport.name.toLowerCase().includes(searchTerm)
+                    );
+                  }}
                 />
               </div>
             </div>
@@ -514,14 +648,20 @@ function App() {
                     : '&copy; OpenStreetMap contributors'
                   }
                 />
-                {flightPath.length === 2 && (
-                  <Polyline positions={flightPath} color="#fbbf24" weight={4} />
+                {flightPath.length > 0 && (
+                  <Polyline 
+                    positions={flightPath} 
+                    color="#fbbf24" 
+                    weight={3} 
+                    dashArray="8, 4"
+                    opacity={0.8}
+                  />
                 )}
-                {flightPath.length === 2 && (
+                {flightPath.length > 0 && (
                   <FitBounds bounds={flightPath as any} />
                 )}
                 {sourceAirport && (
-                  <Marker position={[sourceAirport.lat, sourceAirport.lon]}>
+                  <Marker position={[sourceAirport.lat, sourceAirport.lon]} icon={departureIcon}>
                     <Popup>
                       <div className="font-bold">{sourceAirport.city} ({sourceAirport.iata})</div>
                       <div>{sourceAirport.name}</div>
@@ -529,7 +669,7 @@ function App() {
                   </Marker>
                 )}
                 {destAirport && (
-                  <Marker position={[destAirport.lat, destAirport.lon]}>
+                  <Marker position={[destAirport.lat, destAirport.lon]} icon={arrivalIcon}>
                     <Popup>
                       <div className="font-bold">{destAirport.city} ({destAirport.iata})</div>
                       <div>{destAirport.name}</div>
@@ -548,7 +688,7 @@ function App() {
                   </CircleMarker>
                 )}
                 {planePos && (
-                  <Marker position={planePos}>
+                  <Marker position={planePos} icon={planeIcon}>
                     <Popup>
                       <div className="font-bold">Plane Position</div>
                       <div>{DateTime.fromJSDate(mapTime).toFormat('yyyy-LL-dd HH:mm ZZZZ')}</div>

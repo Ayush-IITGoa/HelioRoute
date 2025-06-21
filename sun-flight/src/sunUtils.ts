@@ -53,7 +53,7 @@ export function interpolateSunAlongRoute(
 }
 
 // Spherical linear interpolation (great circle)
-function interpolateGreatCircle(lat1: number, lon1: number, lat2: number, lon2: number, frac: number) {
+export function interpolateGreatCircle(lat1: number, lon1: number, lat2: number, lon2: number, frac: number) {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const toDeg = (rad: number) => (rad * 180) / Math.PI;
   const φ1 = toRad(lat1), λ1 = toRad(lon1);
