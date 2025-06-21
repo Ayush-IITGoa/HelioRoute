@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import airports from './airports.json'
 import { DateTime } from 'luxon'
 import SunCalc from 'suncalc'
-import { FaPlaneDeparture, FaPlaneArrival, FaCalendarAlt, FaClock, FaQrcode, FaStar, FaTrash, FaSun } from 'react-icons/fa';
+import { FaPlaneDeparture, FaPlaneArrival, FaCalendarAlt, FaClock, FaQrcode, FaStar, FaTrash, FaSun, FaLink, FaCopy } from 'react-icons/fa';
 import Select, { components, type MenuListProps } from 'react-select';
 import { FixedSizeList as List } from 'react-window';
 import L from 'leaflet';
@@ -233,6 +233,7 @@ function App() {
   const [mapTime, setMapTime] = useState<Date>(() => new Date());
   const [darkMode, setDarkMode] = useState(true);
   const [favorites, setFavorites] = useState<Array<{ source: string, dest: string }>>([]);
+  const [showCopyFeedback, setShowCopyFeedback] = useState(false);
 
   const isCurrentFavorite = favorites.some(
     fav => fav.source === sourceIATA && fav.dest === destIATA
@@ -278,6 +279,64 @@ function App() {
     setSourceIATA(destIATA);
     setDestIATA(temp);
   };
+
+  const makeShareLink = () => {
+    const params = new URLSearchParams();
+    params.set('source', sourceIATA);
+    params.set('destination', destIATA);
+    params.set('departure', departure);
+    params.set('duration', flightTime);
+    
+    const shareableUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    
+    navigator.clipboard.writeText(shareableUrl).then(() => {
+      setShowCopyFeedback(true);
+      setTimeout(() => setShowCopyFeedback(false), 2000);
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = shareableUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setShowCopyFeedback(true);
+      setTimeout(() => setShowCopyFeedback(false), 2000);
+    });
+  };
+
+  const prefillFromURL = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceParam = urlParams.get('source');
+    const destinationParam = urlParams.get('destination');
+    const departureParam = urlParams.get('departure');
+    const durationParam = urlParams.get('duration');
+
+    if (sourceParam) {
+      setSourceIATA(sourceParam.toUpperCase());
+      const foundSource = airports.find(a => a.iata === sourceParam.toUpperCase());
+      if (foundSource) setSourceAirport(foundSource);
+    }
+    
+    if (destinationParam) {
+      setDestIATA(destinationParam.toUpperCase());
+      const foundDest = airports.find(a => a.iata === destinationParam.toUpperCase());
+      if (foundDest) setDestAirport(foundDest);
+    }
+    
+    if (departureParam) {
+      setDeparture(departureParam);
+    }
+    
+    if (durationParam) {
+      setFlightTime(durationParam);
+    }
+  };
+
+  // Parse URL parameters on component mount
+  useEffect(() => {
+    prefillFromURL();
+  }, []);
 
   useEffect(() => {
     if (darkMode) {
@@ -620,6 +679,30 @@ function App() {
               {loading ? 'Calculating...' : 'Get Recommendation'}
             </button>
           </form>
+          
+          {/* Copy Shareable Link Button */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={makeShareLink}
+              className="w-full py-2 px-4 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-amber-400 transition-all duration-200 border border-slate-600/50 hover:border-amber-500/50 flex items-center justify-center gap-2"
+              title="Copy shareable link with current flight details"
+            >
+              <FaLink className="w-4 h-4" />
+              {showCopyFeedback ? (
+                <>
+                  <FaCopy className="w-4 h-4" />
+                  Link copied!
+                </>
+              ) : (
+                <>
+                  <FaCopy className="w-4 h-4" />
+                  Copy shareable link
+                </>
+              )}
+            </button>
+          </div>
+          
           {error && <div className="mt-2 p-3 bg-red-500/80 rounded-lg text-white font-semibold">{error}</div>}
           {dstWarning && <div className="mt-2 p-3 bg-amber-400/80 rounded-lg text-slate-900 font-semibold whitespace-pre-line">{dstWarning}</div>}
           {recommendation && (
