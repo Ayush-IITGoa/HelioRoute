@@ -18,6 +18,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Force deployment update - Enhanced markers and UI improvements
+
 // Create custom modern markers
 const createCustomIcon = (color: string, icon: any) => {
   return L.divIcon({
