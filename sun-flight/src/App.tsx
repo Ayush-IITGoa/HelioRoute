@@ -4,11 +4,11 @@ import { MapContainer, TileLayer, Polyline, useMap, CircleMarker, Marker, Popup,
 import 'leaflet/dist/leaflet.css'
 import airports from './airports.json'
 import { DateTime } from 'luxon'
-// @ts-ignore
 import SunCalc from 'suncalc'
 import { FaPlaneDeparture, FaPlaneArrival, FaCalendarAlt, FaClock, FaQrcode, FaStar, FaTrash, FaSun } from 'react-icons/fa';
 import Select, { components, type MenuListProps } from 'react-select';
 import { FixedSizeList as List } from 'react-window';
+import L from 'leaflet';
 
 interface AirportOption {
   value: string;
@@ -73,10 +73,13 @@ const MenuList = (props: MenuListProps<AirportOption>) => {
   );
 };
 
+// Map controller component that handles bounds fitting
 function FitBounds({ bounds }: { bounds: L.LatLngBoundsExpression }) {
   const map = useMap()
   useEffect(() => {
-    if(bounds) map.fitBounds(bounds, {padding: [50, 50]});
+    if (bounds) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
   }, [bounds, map])
   return null
 }
@@ -340,6 +343,7 @@ function App() {
     sunAlt = sunPoints[idx].altitude;
     planePos = [sunPoints[idx].lat, sunPoints[idx].lon];
   }
+
   // Subsolar point and terminator
   const subsolar = getSubsolarPoint(mapTime);
   const terminatorPoints = getTerminatorPolyline(mapTime);
