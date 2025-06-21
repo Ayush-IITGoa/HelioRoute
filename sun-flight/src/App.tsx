@@ -110,11 +110,11 @@ const customSelectStyles = {
 };
 
 // Custom Option component for better airport display
-const CustomOption = ({ data, isFocused, isSelected, ...props }: any) => {
+const CustomOption = ({ data, isFocused, isSelected, innerProps, ...props }: any) => {
   const airport = data.airport;
   return (
     <div
-      {...props}
+      {...innerProps}
       className={`p-3 cursor-pointer transition-colors ${
         isSelected ? 'bg-amber-500 text-slate-900' : 
         isFocused ? 'bg-amber-500/20 text-slate-200' : 'text-slate-300'
