@@ -676,7 +676,7 @@ function App() {
               className="mt-4 w-full py-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 font-bold text-lg text-white shadow-lg hover:shadow-orange-400/20 hover:scale-[1.02] transition-all duration-300"
               disabled={loading}
             >
-              {loading ? 'Calculating...' : 'Get Recommendation'}
+              {loading ? 'Calculating...' : 'Get Helio Route'}
             </button>
           </form>
           
@@ -708,7 +708,7 @@ function App() {
           {recommendation && (
             <div className="mt-4 p-4 rounded-xl bg-slate-900/70 backdrop-blur-lg border border-slate-700/50">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-bold text-white">Recommended Seat</h3>
+                <h3 className="text-lg font-bold text-white">Helio Side</h3>
                 <button onClick={toggleFavorite} className="transition" title={isCurrentFavorite ? "Remove from Favorites" : "Add to Favorites"}>
                   <FaStar className={isCurrentFavorite ? "text-amber-400" : "text-white"} />
                 </button>
@@ -852,7 +852,7 @@ function App() {
         </section>
       </main>
       <footer className="py-4 text-center text-slate-500 text-xs bg-slate-900/70 backdrop-blur-lg border-t border-slate-700/50">
-        &copy; {new Date().getFullYear()} Helio Route &mdash; Find your perfect seat for sunrise and sunset views.
+        Made with Cursor by <a href="https://github.com/Ayush-IITGoa" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 transition-colors">Ayush Raj</a> for Trilogy
       </footer>
     </div>
   )
