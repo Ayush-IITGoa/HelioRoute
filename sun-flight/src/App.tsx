@@ -613,25 +613,6 @@ function App() {
         <section className="w-full lg:w-2/3 flex flex-col gap-6">
           <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 flex-1 flex flex-col sparkle-on-hover">
             <h2 className="text-xl font-bold text-white mb-4">Flight Path & Sun Position</h2>
-            {/* Time slider */}
-            {depTime && arrivalTime && (
-              <div className="mb-6">
-                <label className="block text-sm font-semibold mb-2 text-slate-300" htmlFor="time-slider">Select Time Along Flight</label>
-                <input
-                  id="time-slider"
-                  type="range"
-                  min={minTime}
-                  max={maxTime}
-                  step={10 * 60 * 1000}
-                  value={mapTime.getTime()}
-                  onChange={e => setMapTime(new Date(Number(e.target.value)))}
-                  className="w-full accent-amber-500"
-                />
-                <div className="text-xs text-slate-400 text-center mt-1">
-                  {DateTime.fromJSDate(mapTime).toFormat('yyyy-LL-dd HH:mm ZZZZ')}
-                </div>
-              </div>
-            )}
             <div className="h-[400px] rounded-lg overflow-hidden border-2 border-slate-700/50 shadow-inner">
               <MapContainer
                 center={sourceAirport ? [sourceAirport.lat, sourceAirport.lon] : [0, 0]}
@@ -706,6 +687,25 @@ function App() {
                 )}
               </MapContainer>
             </div>
+            {/* Time slider moved below the map */}
+            {depTime && arrivalTime && (
+              <div className="mt-4">
+                <label className="block text-sm font-semibold mb-2 text-slate-300" htmlFor="time-slider">Select Time Along Flight</label>
+                <input
+                  id="time-slider"
+                  type="range"
+                  min={minTime}
+                  max={maxTime}
+                  step={10 * 60 * 1000}
+                  value={mapTime.getTime()}
+                  onChange={e => setMapTime(new Date(Number(e.target.value)))}
+                  className="w-full accent-amber-500"
+                />
+                <div className="text-xs text-slate-400 text-center mt-1">
+                  {DateTime.fromJSDate(mapTime).toFormat('yyyy-LL-dd HH:mm ZZZZ')}
+                </div>
+              </div>
+            )}
             {sunEvents.length > 0 && (
               <div className="mt-4 text-sm text-slate-200">
                 <h3 className="font-semibold mb-1 text-white">Sun Events During Flight:</h3>
