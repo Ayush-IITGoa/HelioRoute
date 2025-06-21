@@ -228,7 +228,7 @@ function App() {
   const [arrivalTime, setArrivalTime] = useState<DateTime | null>(null)
   const [dstWarning, setDstWarning] = useState<string | null>(null)
   const [sunSummary, setSunSummary] = useState<string>('')
-  const [sunEvents, setSunEvents] = useState<Array<{ type: 'sunrise' | 'sunset'; time: Date; lat: number; lon: number }>>([])
+  const [sunEvents, setSunEvents] = useState<Array<{ type: 'sunrise' | 'sunset'; time: Date; lat: number; lon: number; azimuth: number; position: string }>>([])
   const [mapTime, setMapTime] = useState<Date>(() => new Date());
   const [darkMode, setDarkMode] = useState(true);
   const [favorites, setFavorites] = useState<Array<{ source: string, dest: string }>>([]);
@@ -440,18 +440,37 @@ function App() {
         depDT.toUTC().toJSDate(), Number(flightTime), intervalMin
       );
       
-      let events: Array<{ type: 'sunrise' | 'sunset'; time: Date; lat: number; lon: number }> = [];
+      let events: Array<{ type: 'sunrise' | 'sunset'; time: Date; lat: number; lon: number; azimuth: number; position: string }> = [];
       let prevAlt = null;
       for (let i = 0; i < sunPoints.length; i++) {
         const p = sunPoints[i];
         const times = SunCalc.getTimes(p.time, p.lat, p.lon);
+        
+        // Calculate flight heading at this point
+        let heading = 0;
+        if (i < sunPoints.length - 1) {
+          const p2 = sunPoints[i + 1];
+          heading = getInitialBearing(p.lat, p.lon, p2.lat, p2.lon);
+        } else if (i > 0) {
+          const p1 = sunPoints[i - 1];
+          heading = getInitialBearing(p1.lat, p1.lon, p.lat, p.lon);
+        }
+        
+        // Calculate relative sun position
+        const relAngle = (p.azimuth - heading + 360) % 360;
+        let position = '';
+        if (relAngle > 45 && relAngle <= 135) position = 'Right';
+        else if (relAngle > 225 && relAngle <= 315) position = 'Left';
+        else if (relAngle > 315 || relAngle <= 45) position = 'Ahead';
+        else if (relAngle > 135 && relAngle <= 225) position = 'Behind';
+        
         if (prevAlt !== null && prevAlt < 0 && p.altitude >= 0) {
           let eventTime = times.sunrise;
           if (!(eventTime && eventTime >= sunPoints[i-1].time && eventTime <= p.time)) {
             const frac = -prevAlt / (p.altitude - prevAlt);
             eventTime = new Date(sunPoints[i-1].time.getTime() + frac * (p.time.getTime() - sunPoints[i-1].time.getTime()));
           }
-          events.push({ type: 'sunrise', time: eventTime, lat: p.lat, lon: p.lon });
+          events.push({ type: 'sunrise', time: eventTime, lat: p.lat, lon: p.lon, azimuth: p.azimuth, position });
         }
         if (prevAlt !== null && prevAlt >= 0 && p.altitude < 0) {
           let eventTime = times.sunset;
@@ -459,7 +478,7 @@ function App() {
             const frac = prevAlt / (prevAlt - p.altitude);
             eventTime = new Date(sunPoints[i-1].time.getTime() + frac * (p.time.getTime() - sunPoints[i-1].time.getTime()));
           }
-          events.push({ type: 'sunset', time: eventTime, lat: p.lat, lon: p.lon });
+          events.push({ type: 'sunset', time: eventTime, lat: p.lat, lon: p.lon, azimuth: p.azimuth, position });
         }
         prevAlt = p.altitude;
       }
@@ -891,8 +910,12 @@ function App() {
                         <div className="font-medium">
                           {DateTime.fromJSDate(ev.time).toFormat('HH:mm, dd LLL yyyy')}
                         </div>
-                        <div className="text-slate-400 text-xs mt-1">
-                          Location: {ev.lat.toFixed(2)}°N, {ev.lon.toFixed(2)}°E
+                        <div className="text-slate-400 text-xs mt-1 space-y-1">
+                          <div>Location: {ev.lat.toFixed(2)}°N, {ev.lon.toFixed(2)}°E</div>
+                          <div>Sun Azimuth: {ev.azimuth.toFixed(1)}°</div>
+                          <div className="font-medium text-slate-300">
+                            Position: <span className={ev.position === 'Left' ? 'text-blue-400' : ev.position === 'Right' ? 'text-green-400' : 'text-amber-400'}>{ev.position}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
