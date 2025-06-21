@@ -211,13 +211,13 @@ function getTerminatorPolyline(date: Date) {
 }
 
 function App() {
-  const [sourceIATA, setSourceIATA] = useState('JFK')
-  const [destIATA, setDestIATA] = useState('LAX')
-  const [departure, setDeparture] = useState('2024-07-22T08:00')
-  const [flightTime, setFlightTime] = useState('5.5')
+  const [sourceIATA, setSourceIATA] = useState('DEL')
+  const [destIATA, setDestIATA] = useState('BLR')
+  const [departure, setDeparture] = useState('2025-06-22T05:00')
+  const [flightTime, setFlightTime] = useState('24')
 
-  const [sourceAirport, setSourceAirport] = useState<any>(airports.find(a => a.iata === 'JFK'))
-  const [destAirport, setDestAirport] = useState<any>(airports.find(a => a.iata === 'LAX'))
+  const [sourceAirport, setSourceAirport] = useState<any>(airports.find(a => a.iata === 'DEL'))
+  const [destAirport, setDestAirport] = useState<any>(airports.find(a => a.iata === 'BLR'))
   
   const [recommendation, setRecommendation] = useState('')
   const [flightPath, setFlightPath] = useState<[number, number][]>([])
