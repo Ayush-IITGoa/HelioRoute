@@ -833,23 +833,69 @@ function App() {
                 </div>
               </div>
             )}
-            {sunEvents.length > 0 && (
-              <div className="mt-4 text-sm text-slate-200">
-                <h3 className="font-semibold mb-1 text-white">Sun Events During Flight:</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {sunEvents.map((ev, i) => (
-                    <li key={i}>
-                      <span className={ev.type === 'sunrise' ? 'text-amber-400' : 'text-sky-400'}>
-                        {ev.type.charAt(0).toUpperCase() + ev.type.slice(1)}
-                      </span>{' '}
-                      at {DateTime.fromJSDate(ev.time).toFormat('HH:mm, dd LLL yyyy')} (lat {ev.lat.toFixed(2)}, lon {ev.lon.toFixed(2)})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         </section>
+        
+        {/* Dedicated Sunset/Sunrise Information Section */}
+        {(depTime && arrivalTime) && (
+          <section className="w-full lg:w-1/3 bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-6 sparkle-on-hover">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <FaSun className="text-amber-400" />
+              Sunset & Sunrise Info
+            </h2>
+            
+            {sunEvents.length > 0 ? (
+              <div className="space-y-4">
+                <div className="text-sm text-slate-300 mb-3">
+                  <p className="font-semibold text-white mb-1">Sun Events During Your Flight:</p>
+                  <p className="text-slate-400">The following sunrise and sunset events will occur along your flight path:</p>
+                </div>
+                
+                <div className="space-y-3">
+                  {sunEvents.map((ev, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={ev.type === 'sunrise' ? 'text-amber-400' : 'text-sky-400'}>
+                          {ev.type === 'sunrise' ? '🌅' : '🌇'}
+                        </span>
+                        <span className={`font-semibold ${ev.type === 'sunrise' ? 'text-amber-400' : 'text-sky-400'}`}>
+                          {ev.type.charAt(0).toUpperCase() + ev.type.slice(1)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        <div className="font-medium">
+                          {DateTime.fromJSDate(ev.time).toFormat('HH:mm, dd LLL yyyy')}
+                        </div>
+                        <div className="text-slate-400 text-xs mt-1">
+                          Location: {ev.lat.toFixed(2)}°N, {ev.lon.toFixed(2)}°E
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">🌙</div>
+                <h3 className="text-lg font-semibold text-white mb-2">No Sunrise/Sunset Events</h3>
+                <p className="text-slate-400 text-sm">
+                  During your flight from {sourceAirport?.city} to {destAirport?.city}, 
+                  there will be no sunrise or sunset events along the flight path.
+                </p>
+                <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+                  <div className="text-xs text-slate-400">
+                    <div className="font-medium text-slate-300 mb-1">Flight Duration:</div>
+                    <div>{flightTime} hours</div>
+                    <div className="font-medium text-slate-300 mt-2 mb-1">Departure:</div>
+                    <div>{depTime?.toFormat('HH:mm, dd LLL yyyy')}</div>
+                    <div className="font-medium text-slate-300 mt-2 mb-1">Arrival:</div>
+                    <div>{arrivalTime?.toFormat('HH:mm, dd LLL yyyy')}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </main>
       <footer className="py-4 text-center text-slate-500 text-xs bg-slate-900/70 backdrop-blur-lg border-t border-slate-700/50">
         Made with Cursor by <a href="https://github.com/Ayush-IITGoa" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 transition-colors">Ayush Raj</a> for Trilogy
