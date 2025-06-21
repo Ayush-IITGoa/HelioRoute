@@ -221,6 +221,7 @@ function App() {
   
   const [recommendation, setRecommendation] = useState('')
   const [flightPath, setFlightPath] = useState<[number, number][]>([])
+  const [flightPathSegments, setFlightPathSegments] = useState<[number, number][][]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [depTime, setDepTime] = useState<DateTime | null>(null)
@@ -291,6 +292,7 @@ function App() {
     setError(null)
     setRecommendation('')
     setFlightPath([])
+    setFlightPathSegments([])
     setDepTime(null)
     setArrivalTime(null)
     setDstWarning(null)
@@ -337,11 +339,43 @@ function App() {
           points.push([point.lat, point.lon]);
         }
         
-        return points;
+        // Check for date line crossing and split path if needed
+        const segments: [number, number][][] = [];
+        let currentSegment: [number, number][] = [];
+        
+        for (let i = 0; i < points.length; i++) {
+          const point = points[i];
+          
+          if (currentSegment.length === 0) {
+            currentSegment.push(point);
+          } else {
+            const prevPoint = currentSegment[currentSegment.length - 1];
+            const lonDiff = Math.abs(point[1] - prevPoint[1]);
+            
+            // If longitude difference is greater than 180°, it's a date line crossing
+            if (lonDiff > 180) {
+              // End current segment and start new one
+              if (currentSegment.length > 0) {
+                segments.push([...currentSegment]);
+              }
+              currentSegment = [point];
+            } else {
+              currentSegment.push(point);
+            }
+          }
+        }
+        
+        // Add the last segment
+        if (currentSegment.length > 0) {
+          segments.push(currentSegment);
+        }
+        
+        return segments;
       };
       
-      const flightPathPoints = createFlightPath(src.lat, src.lon, dst.lat, dst.lon);
-      setFlightPath(flightPathPoints)
+      const flightPathSegments = createFlightPath(src.lat, src.lon, dst.lat, dst.lon);
+      setFlightPathSegments(flightPathSegments);
+      setFlightPath(flightPathSegments.flat()); // Flatten for backward compatibility
 
       const intervalMin = 10;
       const sunPoints = interpolateSunAlongRoute(
@@ -640,15 +674,16 @@ function App() {
                     : '&copy; OpenStreetMap contributors'
                   }
                 />
-                {flightPath.length > 0 && (
+                {flightPathSegments.length > 0 && flightPathSegments.map((segment, index) => (
                   <Polyline 
-                    positions={flightPath} 
+                    key={index}
+                    positions={segment} 
                     color="#fbbf24" 
                     weight={3} 
                     dashArray="8, 4"
                     opacity={0.8}
                   />
-                )}
+                ))}
                 {flightPath.length > 0 && (
                   <FitBounds bounds={flightPath as any} />
                 )}
